@@ -195,3 +195,29 @@ function one_time_login_url_handle_token() {
 	exit;
 }
 add_action( 'init', 'one_time_login_url_handle_token' );
+
+
+/**
+ * administrator menu
+ */
+function one_time_login_url_create_menu(){
+	add_menu_page('OneTimeLoginUrl Plugin Setting','OneTimeLoginUrl','administrator', __FILE__, 'one_time_login_url_settings_page',plugins_url('/images/icon.png', __FILE__));
+	// created function is callback function
+	add_action('admin_init', 'one_time_login_url_register_settings');
+}
+add_action( 'admin_menu' , 'one_time_login_url_create_menu' );
+
+// callback
+function one_time_login_url_register_settings(){
+	register_setting('one-time-login-url-setting-group','new_option_name');
+	register_setting('one-time-login-url-setting-group','other_option_name');
+	register_setting('one-time-login-url-setting-group','option_etc');
+}
+
+// load administrator view
+require_once(__DIR__ . '/one-time-login-url-admin.php');
+
+
+
+
+
