@@ -82,26 +82,30 @@ function one_time_login_url_wp_cli_command( $args, $assoc_args ) {
 			$fmdate=$v;
 		}
 	}
+	echo "delay_delete=".$delay_delete."\n";
 
+	$invalidate_time=0;
 	if ( $delay_delete ) {
-		$to_time=0;
-		if ( is_numeric( $delay_dalete ) ){
-			$to_time = time() + ( $delay_delete * MINUTE_IN_SECONDS );
-		}else{
-			$to_time = strtotile($delete_delete);
-			if ( ! $to_time ){
+		echo "delay_delete\n";
+		$invalidate_time=strtotime($delay_delete);
+		echo "invalidate_time=".$invalidate_time."\n";
+		if ( ! $invalidate_time ){
+			$val = (int) $delay_delete;
+			echo "val=".$val."\n";
+			if ( $val ==0 ){
 				wp_die( "Invalid option : delay-delete\n" );
 			}
+			$invalidate_time = time() + ( $delay_delete * MINUTE_IN_SECONDS );
 		}
 		$tokens = get_user_meta( $user->ID, 'one_time_login_url_token', true );
 		$tokens = is_string( $tokens ) ? array( $tokens ) : $tokens;
-		wp_schedule_single_event( $to_time , 'one_time_login_url_cleanup_expired_tokens', array( $user->ID, $tokens ) );
+		wp_schedule_single_event( $invalidate_time , 'one_time_login_url_cleanup_expired_tokens', array( $user->ID, $tokens ) );
 	}
 
 	for ( $i = 0; $i < $count; $i++ ) {
 		$password = wp_generate_password();
 		$token = sha1( $password );
-		$tokens[] = array("password"=>$token,"fmdate"=>strtotime($fmdate),"todate"=>strtotime($todate));
+		$tokens[] = array("password"=>$token,"fmdate"=>strtotime($from_date),"todate"=>strtotime($to_date),"invtime"=>$invalidate_time);
 		$new_tokens[] = $token;
 	}
 
@@ -186,14 +190,18 @@ function one_time_login_url_handle_token() {
 	$tokens = is_string( $tokens ) ? array( $tokens ) : $tokens;
 	$is_valid = false;
 	foreach ( $tokens as $i => $token ) {
-		if ($token["todate"]<$time()){
-			unset($tokens[ $i ]);
+		if($token["todate"]<time()){
+			if ( $token["invtime"]==0){
+				unset($tokens[ $i ]);
+			}
 			continue;
 		}
 
-		if ( hash_equals( $token["password"], $_GET['one_time_login_url_token'] ) and $token["fmdate"]<=$time() and $time()<=$token["todate"]) {
+		if ( hash_equals( $token["password"], $_GET['one_time_login_url_token'] ) and $token["fmdate"]<=time() and time()<=$token["todate"]) {
 			$is_valid = true;
-			unset( $tokens[ $i ] );
+			if( $token["invtime"]==0){
+				unset( $tokens[ $i ] );
+			}
 			break;
 		}
 	}
