@@ -26,8 +26,8 @@
  * default: 1
  * ---
  *
- * [--delay-delete=<min|NONE>]
- * : Delete existing tokens after <min> minutes. if <NONE> seted ,delete tokens  at to to-date, or never delele this token without to-date.
+ * [--delay-delete=<min|YYYY-mm-dd>]
+ * : Delete existing tokens after <min> minutes. if <YYYY-mm-dd> is seted ,delete tokens  at YYYY-mm-dd.
  *  if no set this option, token delete immediately.
  *
  * [--from-date=<YYYY-mm-dd>]
@@ -50,11 +50,10 @@
  *     http://wpdev.test/wp-login.php?user_id=2&one_time_login_url_token=ebe62e3
  *     http://wpdev.test/wp-login.php?user_id=2&one_time_login_url_token=eb41c77
  *
- * ## EXAMPLES
- *
  *     $ wp user one-time-login-url testuser --from-date="2019-01-01 00:00:00"
+ *     # this url is invalid by from-date, after from-date you can access this url. 
  *
- *     $ wp user one-time-login-url testuser --delay-delete=None --to-date="2019-03-03"
+ *     $ wp user one-time-login-url testuser --delay-delete="2019-03-03" --to-date="2019-03-03"
  *     # token is valid to "2019-03-03" ,you can access many times up to "2019-03-03"
  *
  *     $ wp user one-time-login-url testuser --delete-delete=None
@@ -85,9 +84,18 @@ function one_time_login_url_wp_cli_command( $args, $assoc_args ) {
 	}
 
 	if ( $delay_delete ) {
+		$to_time=0;
+		if ( is_numeric( $delay_dalete ) ){
+			$to_time = time() + ( $delay_delete * MINUTE_IN_SECONDS );
+		}else{
+			$to_time = strtotile($delete_delete);
+			if ( ! $to_time ){
+				wp_die( "Invalid option : delay-delete\n" );
+			}
+		}
 		$tokens = get_user_meta( $user->ID, 'one_time_login_url_token', true );
 		$tokens = is_string( $tokens ) ? array( $tokens ) : $tokens;
-		wp_schedule_single_event( time() + ( 15 * MINUTE_IN_SECONDS ), 'one_time_login_url_cleanup_expired_tokens', array( $user->ID, $tokens ) );
+		wp_schedule_single_event( $to_time , 'one_time_login_url_cleanup_expired_tokens', array( $user->ID, $tokens ) );
 	}
 
 	for ( $i = 0; $i < $count; $i++ ) {
