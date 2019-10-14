@@ -143,7 +143,7 @@ if ( class_exists( 'WP_CLI' ) ) {
  * Handle cleanup process for expired one-time login tokens.
  */
 function one_time_login_url_cleanup_expired_tokens( $user_id, $expired_tokens ) {
-	_log("expired_tokens,user_id=".$user_id);
+	//_log("expired_tokens,user_id=".$user_id);
 	$tokens = get_user_meta( $user_id, 'one_time_login_url_token', true );
 	$tokens = is_string( $tokens ) ? array( $tokens ) : $tokens;
 	$new_tokens = array();
@@ -206,11 +206,11 @@ function one_time_login_url_handle_token() {
 	$is_valid = false;
 	$time=time();
 	foreach ( $tokens as $i => $token ) {
-		_log("expire_date=".$token["expire_date"]);
-		_log("expire_date=".strftime('%Y-%m-%d %H:%M:%S',$token["expire_date"]));
-		_log("time=".strftime('%Y-%m-%d %H:%M:%S',$time));
+		//_log("expire_date=".$token["expire_date"]);
+		//_log("expire_date=".strftime('%Y-%m-%d %H:%M:%S',$token["expire_date"]));
+		//_log("time=".strftime('%Y-%m-%d %H:%M:%S',$time));
 		if($token["expire_date"]!=0 and $token["expire_date"]<$time){
-			_log("unset1");
+			//_log("unset1");
 			unset($tokens[ $i ]);
 			continue;
 		}
@@ -226,7 +226,7 @@ function one_time_login_url_handle_token() {
 		if ( hash_equals( $token["password"], $_GET['one_time_login_url_token'] ) and $token["from_date"]<=$time ) {
 			$is_valid = true;
 			if( $token["expire_date"]==0){
-				_log("unset2");
+				//_log("unset2");
 				unset( $tokens[ $i ] );
 			}
 			break;
@@ -239,14 +239,14 @@ function one_time_login_url_handle_token() {
 		wp_die( $error );
 	}
 
-	_log("tokens=".var_dump($tokens));
+	//_log("tokens=".var_dump($tokens));
 	do_action( 'one_time_login_url_logged_in', $user );
 	//update_user_meta( $user->ID, 'one_time_login_url_token', $tokens );
 	wp_set_auth_cookie( $user->ID, true, is_ssl() );
 
-	_log("admin_url=". admin_url());
-	_log("site_url=". site_url());
-	_log("redirect=".$token["redirect"]);
+	//_log("admin_url=". admin_url());
+	//_log("site_url=". site_url());
+	//_log("redirect=".$token["redirect"]);
 	if ( $token["redirect"] ){
 		wp_safe_redirect( site_url().$token["redirect"] );
 	}else{
