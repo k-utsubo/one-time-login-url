@@ -26,20 +26,29 @@
  * default: 1
  * ---
  *
- * [--delay-delete]
- * : Delete existing tokens after 15 minutes, instead of immediately.
- *
  * [--expire-date=<datestring>]
- * : Delete existing tokens at YYYY-mm-dd.
+ * : Delete existing tokens at expire-date. if not seted ,token will delete immediately.
+ * ---
+ * default: 
+ * ---
  *
  * [--from-date=<datestring>]
- * : Validity period start date time. Invalidate if not set.
+ * : Validity period start date time. 
+ * ---
+ * default: 
+ * ---
  *
  * [--to-date=<datestring>]
- * : Validity period end date time. Invalidate if not set.
+ * : Validity period end date time. 
+ * ---
+ * default: 
+ * ---
  *
  * [--redirect=<url>]
- * : After login , redirect page
+ * : After login , you will go this redirect page. if not seted, redirect to admin page.
+ * ---
+ * default: 
+ * ---
  *
  * ## EXAMPLES
  *
@@ -54,16 +63,13 @@
  *     $ wp user one-time-login-url testuser --expire-date="2019-03-03" --to-date="2019-03-03"
  *     # token is expired at "2019-03-03" ,you can access many times up to "2019-03-03"
  *
- *     $ wp user one-time-login-url testuser --delete-delete=None
- *     # token never delete. (not recommend)
- *
  *     $ wp user one-time-login-url testuser --redirect=/?page_id=8
  */
 function one_time_login_url_wp_cli_command( $args, $assoc_args ) {
 
 	$fetcher = new WP_CLI\Fetchers\User;
 	$user = $fetcher->get_check( $args[0] );
-	$delay_delete = WP_CLI\Utils\get_flag_value( $assoc_args, 'delay-delete' );
+	//$delay_delete = WP_CLI\Utils\get_flag_value( $assoc_args, 'delay-delete' );
 	$expire_date = WP_CLI\Utils\get_flag_value( $assoc_args, 'expire-date' );
 	$to_date = WP_CLI\Utils\get_flag_value( $assoc_args, 'to-date' );
 	$from_date = WP_CLI\Utils\get_flag_value( $assoc_args, 'from-date' );
@@ -71,6 +77,7 @@ function one_time_login_url_wp_cli_command( $args, $assoc_args ) {
 	$count = (int) $assoc_args['count'];
 	$tokens = $new_tokens = array();
 
+	echo  "to_date=".$to_date.",from_date=".$from_date.",expire_date=".$expire_date.",redirect=".$redirect."\n";
 	if ( $to_date ) {
 		if ( strlen($to_date)<=10){
 			$to_date=$to_date."T23:59:59";
@@ -78,6 +85,7 @@ function one_time_login_url_wp_cli_command( $args, $assoc_args ) {
 	}else{
 		$to_date = "2038-01-18T23:59:59";
 	}
+	echo "to_date=".$to_date."\n";
 	if ( !strtotime($to_date) ){
 		wp_die( "Invalid option : to-date\n" );
 	}
@@ -100,16 +108,16 @@ function one_time_login_url_wp_cli_command( $args, $assoc_args ) {
 		if ( ! strtotime($expire_date) ){
 			wp_die( "Invalid option : expire-date\n" );
 		}
-		$tokens = get_user_meta( $user->ID, 'one_time_login_url_token', true );
-		$tokens = is_string( $tokens ) ? array( $tokens ) : $tokens;
-		wp_schedule_single_event( strtotime($expire_date) , 'one_time_login_url_cleanup_expired_tokens', array( $user->ID, $tokens ) );
+//		$tokens = get_user_meta( $user->ID, 'one_time_login_url_token', true );
+//		$tokens = is_string( $tokens ) ? array( $tokens ) : $tokens;
+//		wp_schedule_single_event( strtotime($expire_date) , 'one_time_login_url_cleanup_expired_tokens', array( $user->ID, $tokens ) );
 	}
 
-	if ( $delay_delete ) {
-		$tokens = get_user_meta( $user->ID, 'one_time_login_token', true );
-		$tokens = is_string( $tokens ) ? array( $tokens ) : $tokens;
-		wp_schedule_single_event( time() + ( 15 * MINUTE_IN_SECONDS ), 'one_time_login_cleanup_expired_tokens', array( $user->ID, $tokens ) );
-	}
+//	if ( $delay_delete ) {
+//		$tokens = get_user_meta( $user->ID, 'one_time_login_token', true );
+//		$tokens = is_string( $tokens ) ? array( $tokens ) : $tokens;
+//		wp_schedule_single_event( time() + ( 15 * MINUTE_IN_SECONDS ), 'one_time_login_cleanup_expired_tokens', array( $user->ID, $tokens ) );
+//	}
 
 	for ( $i = 0; $i < $count; $i++ ) {
 		$password = wp_generate_password();
@@ -138,6 +146,7 @@ if ( class_exists( 'WP_CLI' ) ) {
  * Handle cleanup process for expired one-time login tokens.
  */
 function one_time_login_url_cleanup_expired_tokens( $user_id, $expired_tokens ) {
+	_log("expired_tokens,user_id=".$user_id);
 	$tokens = get_user_meta( $user_id, 'one_time_login_url_token', true );
 	$tokens = is_string( $tokens ) ? array( $tokens ) : $tokens;
 	$new_tokens = array();
@@ -200,29 +209,37 @@ function one_time_login_url_handle_token() {
 	$is_valid = false;
 	$time=time();
 	foreach ( $tokens as $i => $token ) {
-	echo "time=".$time.",expire_date=".$token["expire_date"].",from_date=".$token["from_date"].",to_date=".$token["to_date"]."\n";
+		_log("expire_date=".$token["expire_date"]);
+		_log("expire_date=".strftime('%Y-%m-%d %H:%M:%S',$token["expire_date"]));
+		_log("time=".strftime('%Y-%m-%d %H:%M:%S',$time));
+		if($token["expire_date"]<$time){
+			_log("unset1");
+			unset($tokens[ $i ]);
+			continue;
+		}
 		if($token["to_date"]<$time){
-			if ( $token["expire_date"]==0){
-				unset($tokens[ $i ]);
-			}
 			continue;
 		}
 
 		if ( hash_equals( $token["password"], $_GET['one_time_login_url_token'] ) and $token["from_date"]<=$time and $time<=$token["to_date"]) {
 			$is_valid = true;
 			if( $token["expire_date"]==0){
+				_log("unset2");
 				unset( $tokens[ $i ] );
 			}
 			break;
 		}
 	}
 
+	update_user_meta( $user->ID, 'one_time_login_url_token', $tokens );
+
 	if ( ! $is_valid ) {
 		wp_die( $error );
 	}
 
+	_log("tokens=".var_dump($tokens));
 	do_action( 'one_time_login_url_logged_in', $user );
-	update_user_meta( $user->ID, 'one_time_login_url_token', $tokens );
+	//update_user_meta( $user->ID, 'one_time_login_url_token', $tokens );
 	wp_set_auth_cookie( $user->ID, true, is_ssl() );
 
 	_log("admin_url=". admin_url());
