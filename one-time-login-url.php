@@ -38,12 +38,6 @@
  * default: 
  * ---
  *
- * [--to-date=<datestring>]
- * : Validity period end date time. 
- * ---
- * default: 
- * ---
- *
  * [--redirect=<url>]
  * : After login , you will go this redirect page. if not seted, redirect to admin page.
  * ---
@@ -60,7 +54,7 @@
  *     $ wp user one-time-login-url testuser --from-date="2019-01-01T00:00:00"
  *     # this url is invalid by from-date, after from-date you can access this url. 
  *
- *     $ wp user one-time-login-url testuser --expire-date="2019-03-03" --to-date="2019-03-03"
+ *     $ wp user one-time-login-url testuser --expire-date="2019-03-03" 
  *     # token is expired at "2019-03-03" ,you can access many times up to "2019-03-03"
  *
  *     $ wp user one-time-login-url testuser --redirect=/?page_id=8
@@ -71,13 +65,14 @@ function one_time_login_url_wp_cli_command( $args, $assoc_args ) {
 	$user = $fetcher->get_check( $args[0] );
 	//$delay_delete = WP_CLI\Utils\get_flag_value( $assoc_args, 'delay-delete' );
 	$expire_date = WP_CLI\Utils\get_flag_value( $assoc_args, 'expire-date' );
-	$to_date = WP_CLI\Utils\get_flag_value( $assoc_args, 'to-date' );
+	//$to_date = WP_CLI\Utils\get_flag_value( $assoc_args, 'to-date' );
 	$from_date = WP_CLI\Utils\get_flag_value( $assoc_args, 'from-date' );
 	$redirect = WP_CLI\Utils\get_flag_value( $assoc_args, 'redirect' );
 	$count = (int) $assoc_args['count'];
 	$tokens = $new_tokens = array();
 
-	echo  "to_date=".$to_date.",from_date=".$from_date.",expire_date=".$expire_date.",redirect=".$redirect."\n";
+	//echo  "to_date=".$to_date.",from_date=".$from_date.",expire_date=".$expire_date.",redirect=".$redirect."\n";
+/*
 	if ( $to_date ) {
 		if ( strlen($to_date)<=10){
 			$to_date=$to_date."T23:59:59";
@@ -85,10 +80,11 @@ function one_time_login_url_wp_cli_command( $args, $assoc_args ) {
 	}else{
 		$to_date = "2038-01-18T23:59:59";
 	}
-	echo "to_date=".$to_date."\n";
+	//echo "to_date=".$to_date."\n";
 	if ( !strtotime($to_date) ){
 		wp_die( "Invalid option : to-date\n" );
 	}
+*/
 
 	if ( $from_date ){
 		if ( strlen($from_date)<=10){
@@ -122,7 +118,8 @@ function one_time_login_url_wp_cli_command( $args, $assoc_args ) {
 	for ( $i = 0; $i < $count; $i++ ) {
 		$password = wp_generate_password();
 		$token = sha1( $password );
-		$tokens[] = array("password"=>$token,"from_date"=>strtotime($from_date),"to_date"=>strtotime($to_date),"expire_date"=>strtotime($expire_date),"redirect"=>$redirect);
+		//$tokens[] = array("password"=>$token,"from_date"=>strtotime($from_date),"to_date"=>strtotime($to_date),"expire_date"=>strtotime($expire_date),"redirect"=>$redirect);
+		$tokens[] = array("password"=>$token,"from_date"=>strtotime($from_date),"expire_date"=>strtotime($expire_date),"redirect"=>$redirect);
 		$new_tokens[] = $token;
 	}
 
@@ -212,16 +209,21 @@ function one_time_login_url_handle_token() {
 		_log("expire_date=".$token["expire_date"]);
 		_log("expire_date=".strftime('%Y-%m-%d %H:%M:%S',$token["expire_date"]));
 		_log("time=".strftime('%Y-%m-%d %H:%M:%S',$time));
-		if($token["expire_date"]<$time){
+		if($token["expire_date"]!=0 and $token["expire_date"]<$time){
 			_log("unset1");
 			unset($tokens[ $i ]);
 			continue;
 		}
+/*
 		if($token["to_date"]<$time){
+			_log("unset3");
+			unset($tokens[ $i ]);
 			continue;
 		}
+*/
 
-		if ( hash_equals( $token["password"], $_GET['one_time_login_url_token'] ) and $token["from_date"]<=$time and $time<=$token["to_date"]) {
+		//if ( hash_equals( $token["password"], $_GET['one_time_login_url_token'] ) and $token["from_date"]<=$time and $time<=$token["to_date"]) {
+		if ( hash_equals( $token["password"], $_GET['one_time_login_url_token'] ) and $token["from_date"]<=$time ) {
 			$is_valid = true;
 			if( $token["expire_date"]==0){
 				_log("unset2");
