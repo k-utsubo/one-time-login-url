@@ -94,15 +94,15 @@ function one_time_login_url_wp_cli_command( $args, $assoc_args ) {
 		$from_date = "2000-01-01T00:00:00";
 	}
 	if ( !strtotime($from_date) ){
-		wp_die( "Invalid option : from-date\n" );
+		wp_die( "Invalid option : from-date=".$from_date."\n" );
 	}
 
 	if ( $expire_date ) {
 		if ( strlen($expire_date)<=10){
-			$expire_date=$from_date."T23:59:59";
+			$expire_date=$expire_date."T23:59:59";
 		}
 		if ( ! strtotime($expire_date) ){
-			wp_die( "Invalid option : expire-date\n" );
+			wp_die( "Invalid option : expire-date=".$expire_date."\n" );
 		}
 //		$tokens = get_user_meta( $user->ID, 'one_time_login_url_token', true );
 //		$tokens = is_string( $tokens ) ? array( $tokens ) : $tokens;
